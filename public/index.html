@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN Chat Modern</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-main: #f1f5f9;
+            --chat-bg: #ffffff;
+            --msg-out: #4f46e5;
+            --msg-in: #f8fafc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Modal Nickname */
+        #nickname-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            padding: 32px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .modal-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .modal-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .modal-card input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            margin-bottom: 16px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .modal-card input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        .modal-card button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal-card button:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Container Principal Chat */
+        #chat-container {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: var(--chat-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        /* Header Chat */
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+        }
+
+        .chat-header .title-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .chat-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .header-right-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            font-size: 0.85rem;
+            background: var(--bg-main);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .online-users-badge {
+            font-size: 0.85rem;
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .online-users-list {
+            display: none;
+            position: absolute;
+            top: 110%;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            padding: 8px 0;
+            min-width: 160px;
+            z-index: 100;
+        }
+
+        .online-users-badge:hover .online-users-list {
+            display: block;
+        }
+
+        .online-users-list div {
+            padding: 6px 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Message Area */
+        #chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f8fafc;
+        }
+
+        .message {
+            max-width: 65%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-break: break-word;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        /* Efect de evidențiere la click pe Reply */
+        @keyframes highlightPulse {
+            0% { background-color: #fde047; transform: scale(1.02); }
+            100% { background-color: inherit; transform: scale(1); }
+        }
+        .highlight-message {
+            animation: highlightPulse 1.5s ease;
+            border: 2px solid #eab308 !important;
+        }
+
+        .message.incoming {
+            background: var(--msg-in);
+            align-self: flex-start;
+            border: 1px solid var(--border);
+            color: var(--text-dark);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message.outgoing {
+            background: var(--msg-out);
+            align-self: flex-end;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message .sender {
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .message.outgoing .sender {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .message.incoming .sender {
+            color: var(--primary);
+        }
+
+        .message img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: block;
+            object-fit: cover;
+        }
+
+        /* Stil Citat Reply cu Thumbnail integrat */
+        .reply-quote {
+            background: rgba(0, 0, 0, 0.05);
+            border-left: 3px solid var(--primary);
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        .reply-quote:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .message.outgoing .reply-quote {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: white;
+        }
+        .message.outgoing .reply-quote:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .quote-thumb {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .image-upload-loader {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            font-size: 0.85rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .message.incoming .spinner {
+            border: 3px solid rgba(0,0,0,0.1);
+            border-top-color: var(--primary);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #reply-preview-bar {
+            display: none;
+            background: #eef2ff;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            border-left: 4px solid var(--primary);
+            color: var(--text-dark);
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #cancel-reply-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 4px;
+        }
+
+        #typing-indicator {
+            height: 20px;
+            padding: 0 24px;
+            font-size: 0.8rem;
+            font-style: italic;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+        }
+
+        #chat-input-area {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            gap: 12px;
+            background: #ffffff;
+            border-top: 1px solid var(--border);
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+            background: var(--bg-main);
+        }
+
+        #message-input:focus {
+            border-color: var(--primary);
+            background: #ffffff;
+        }
+
+        #chat-input-area input[type="file"] {
+            display: none;
+        }
+
+        .file-btn {
+            padding: 10px;
+            background: var(--bg-main);
+            color: var(--text-muted);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .file-btn:hover {
+            background: #e2e8f0;
+            color: var(--text-dark);
+        }
+
+        #send-btn {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #send-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        #context-menu {
+            display: none;
+            position: absolute;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        #context-menu button {
+            background: none;
+            border: none;
+            padding: 10px 16px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #context-menu button:hover {
+            background: var(--bg-main);
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="nickname-modal">
+        <div class="modal-card">
+            <h2>Welcome!</h2>
+            <p>Enter a nickname to join the LAN chat room.</p>
+            <input type="text" id="nickname-input" placeholder="e.g. Lucian..." autofocus>
+            <button id="save-nickname">Join Chat</button>
+        </div>
+    </div>
+
+    <div id="chat-container">
+        <div class="chat-header">
+            <div class="title-area">
+                <span class="status-dot"></span>
+                <h3>LAN Chat Room</h3>
+            </div>
+
+            <div class="header-right-area">
+                <div class="online-users-badge" id="online-users-count">
+                    👥 Online: 0
+                    <div class="online-users-list" id="online-users-list"></div>
+                </div>
+                <div class="user-badge" id="current-user-badge">@ -</div>
+            </div>
+        </div>
+
+        <div id="chat-messages"></div>
+
+        <div id="reply-preview-bar">
+            <div id="reply-preview-content" style="display: flex; align-items: center; gap: 8px;">
+                <span id="reply-text-preview">Replying to...</span>
+            </div>
+            <button id="cancel-reply-btn" title="Cancel reply">✕</button>
+        </div>
+
+        <div id="typing-indicator"></div>
+
+        <div id="chat-input-area">
+            <label for="image-input" class="file-btn" title="Send an image">📷</label>
+            <input type="file" id="image-input" accept="image/*">
+            
+            <input type="text" id="message-input" placeholder="Type a message...">
+            
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <div id="context-menu">
+        <button id="context-reply-btn">↩️ Reply to message</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const modal = document.getElementById('nickname-modal');
+        const nicknameInput = document.getElementById('nickname-input');
+        const saveNicknameBtn = document.getElementById('save-nickname');
+        const currentUserBadge = document.getElementById('current-user-badge');
+        
+        const onlineUsersCount = document.getElementById('online-users-count');
+        const onlineUsersList = document.getElementById('online-users-list');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        const chatContainer = document.getElementById('chat-container');
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const imageInput = document.getElementById('image-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        const replyPreviewBar = document.getElementById('reply-preview-bar');
+        const replyTextPreview = document.getElementById('reply-text-preview');
+        const replyPreviewContent = document.getElementById('reply-preview-content');
+        const cancelReplyBtn = document.getElementById('cancel-reply-btn');
+        const contextMenu = document.getElementById('context-menu');
+        const contextReplyBtn = document.getElementById('context-reply-btn');
+
+        let myNickname = localStorage.getItem('lan_chat_nickname') || '';
+        let activeReplyData = null;
+        let selectedMessageData = null;
+
+        const typingUsers = new Map();
+        let typingTimeout = null;
+        let isTyping = false;
+
+        if (myNickname) {
+            nicknameInput.value = myNickname;
+            startChat(myNickname);
+        }
+
+        saveNicknameBtn.addEventListener('click', () => {
+            const name = nicknameInput.value.trim();
+            if (name) {
+                myNickname = name;
+                localStorage.setItem('lan_chat_nickname', myNickname);
+                startChat(myNickname);
+            }
+        });
+
+        nicknameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const name = nicknameInput.value.trim();
+                if (name) {
+                    myNickname = name;
+                    localStorage.setItem('lan_chat_nickname', myNickname);
+                    startChat(myNickname);
+                }
+            }
+        });
+
+        function startChat(nickname) {
+            modal.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            currentUserBadge.textContent = `@${nickname}`;
+            socket.emit('set-nickname', nickname);
+        }
+
+        socket.on('update-user-list', (users) => {
+            onlineUsersCount.childNodes[0].textContent = `👥 Online: ${users.length} `;
+            onlineUsersList.innerHTML = '';
+
+            users.forEach(user => {
+                const item = document.createElement('div');
+                item.innerHTML = `<span class="status-dot"></span> ${user}`;
+                onlineUsersList.appendChild(item);
+            });
+        });
+
+        socket.on('user-typing', (data) => {
+            typingUsers.set(data.id, data.nickname);
+            updateTypingIndicator();
+        });
+
+        socket.on('user-stop-typing', (data) => {
+            typingUsers.delete(data.id);
+            updateTypingIndicator();
+        });
+
+        function updateTypingIndicator() {
+            const names = Array.from(typingUsers.values());
+            if (names.length === 0) {
+                typingIndicator.textContent = '';
+            } else if (names.length === 1) {
+                typingIndicator.textContent = `✍️ ${names[0]} is typing...`;
+            } else if (names.length === 2) {
+                typingIndicator.textContent = `✍️ ${names[0]} and ${names[1]} are typing...`;
+            } else {
+                typingIndicator.textContent = `✍️ Several people are typing...`;
+            }
+        }
+
+        messageInput.addEventListener('input', () => {
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing');
+            }
+
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                socket.emit('stop-typing');
+            }, 1500);
+        });
+
+        function appendMessage(sender, text, imgData, type, replyTo = null, isUploading = false, msgId = null) {
+            const div = document.createElement('div');
+            div.classList.add('message', type);
+            
+            // Generăm sau setăm un ID unic pentru mesaj
+            const currentMsgId = msgId || ('msg-' + Math.random().toString(36).substr(2, 9));
+            div.id = currentMsgId;
+
+            div.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                selectedMessageData = {
+                    id: currentMsgId,
+                    sender: sender,
+                    text: text || '',
+                    img: imgData || null
+                };
+                
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.top = `${e.pageY}px`;
+                contextMenu.style.display = 'block';
+            });
+            
+            // Dacă mesajul este un reply, afișăm citatul cu thumbnail dacă are poză
+            if (replyTo) {
+                const quoteDiv = document.createElement('div');
+                quoteDiv.classList.add('reply-quote');
+                
+                let quoteHTML = `<div><strong>${replyTo.sender}</strong>: ${replyTo.text || (replyTo.img ? 'Sent an image' : '')}</div>`;
+                if (replyTo.img) {
+                    quoteHTML += `<img src="${replyTo.img}" class="quote-thumb">`;
+                }
+                quoteDiv.innerHTML = quoteHTML;
+
+                // Click pe citat pentru a face Scroll și Highlight la mesajul original
+                quoteDiv.addEventListener('click', () => {
+                    if (replyTo.id) {
+                        const originalMsg = document.getElementById(replyTo.id);
+                        if (originalMsg) {
+                            originalMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            originalMsg.classList.add('highlight-message');
+                            setTimeout(() => {
+                                originalMsg.classList.remove('highlight-message');
+                            }, 1500);
+                        }
+                    }
+                });
+
+                div.appendChild(quoteDiv);
+            }
+
+            const senderDiv = document.createElement('div');
+            senderDiv.classList.add('sender');
+            senderDiv.textContent = sender === myNickname ? 'Me' : sender;
+            div.appendChild(senderDiv);
+
+            if (text) {
+                const textP = document.createElement('div');
+                textP.textContent = text;
+                div.appendChild(textP);
+            }
+
+            if (isUploading) {
+                const loaderDiv = document.createElement('div');
+                loaderDiv.classList.add('image-upload-loader');
+                loaderDiv.innerHTML = `<div class="spinner"></div> <span>Uploading image...</span>`;
+                div.appendChild(loaderDiv);
+            } else if (imgData) {
+                const img = document.createElement('img');
+                img.src = imgData;
+                div.appendChild(img);
+            }
+
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            return { div, msgId: currentMsgId };
+        }
+
+        document.addEventListener('click', () => {
+            contextMenu.style.display = 'none';
+        });
+
+        contextReplyBtn.addEventListener('click', () => {
+            if (selectedMessageData) {
+                activeReplyData = selectedMessageData;
+                
+                // Generăm preview bar cu thumbnail dacă mesajul selectat are poză
+                let previewHTML = `<span>Replying to <strong>${activeReplyData.sender}</strong>: ${activeReplyData.text || ''}</span>`;
+                if (activeReplyData.img) {
+                    previewHTML += `<img src="${activeReplyData.img}" class="quote-thumb">`;
+                }
+                replyPreviewContent.innerHTML = previewHTML;
+                replyPreviewBar.style.display = 'flex';
+                messageInput.focus();
+            }
+            contextMenu.style.display = 'none';
+        });
+
+        cancelReplyBtn.addEventListener('click', () => {
+            activeReplyData = null;
+            replyPreviewBar.style.display = 'none';
+        });
+
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            clearTimeout(typingTimeout);
+            isTyping = false;
+            socket.emit('stop-typing');
+
+            const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+            const data = { 
+                id: msgId,
+                sender: myNickname, 
+                text: text, 
+                img: null,
+                replyTo: activeReplyData 
+            };
+
+            socket.emit('chat-message', data);
+            appendMessage(myNickname, text, null, 'outgoing', activeReplyData, false, msgId);
+
+            messageInput.value = '';
+            activeReplyData = null;
+            replyPreviewBar.style.display = 'none';
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+            const { div: msgElement } = appendMessage(myNickname, null, null, 'outgoing', activeReplyData, true, msgId);
+
+            const currentReply = activeReplyData;
+            activeReplyData = null;
+            replyPreviewBar.style.display = 'none';
+
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const imgData = event.target.result;
+                
+                const data = { 
+                    id: msgId,
+                    sender: myNickname, 
+                    text: null, 
+                    img: imgData,
+                    replyTo: currentReply 
+                };
+                socket.emit('chat-message', data);
+
+                const loader = msgElement.querySelector('.image-upload-loader');
+                if (loader) loader.remove();
+
+                const img = document.createElement('img');
+                img.src = imgData;
+                msgElement.appendChild(img);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
+
+            reader.readAsDataURL(file);
+            imageInput.value = '';
+        });
+
+        socket.on('chat-message', (data) => {
+            appendMessage(data.sender, data.text, data.img, 'incoming', data.replyTo, false, data.id);
+        });
+    </script>
+</body>
+</html>
