@@ -54,14 +54,12 @@ io.on('connection', (socket) => {
     });
 });
 
-//Linie cod pentru port automat variabil // De schimbat cand este urcat in cloud
-//>> Mai jos codul <<//
-// const PORT = process.env.PORT || 3000;
-// server.listen(PORT, '0.0.0.0', () => {
-//    console.log(`Serverul rulează pe portul ${PORT}.`);
-// });
-
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Serverul rulează local. Accesează-l pe acest PC la: http://localhost:3000`);
+    console.log(`Serverul rulează pe portul ${PORT}.`);
 });
+
+//const PORT = 3000;
+//server.listen(PORT, '0.0.0.0', () => {
+//    console.log(`Serverul rulează local. Accesează-l pe acest PC la: http://localhost:3000`);
+//});
